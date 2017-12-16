@@ -1,17 +1,12 @@
-project(Qt3DPointcloudRenderer)
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.8.0)
+project(Qt3DPointcloudRenderer VERSION 1.0.0)
+
+
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-find_package(Qt5Core REQUIRED)
-find_package(Qt5Qml REQUIRED)
-find_package(Qt5Widgets REQUIRED)
-find_package(Qt5Quick REQUIRED)
-find_package(Qt53DInput REQUIRED)
-find_package(Qt53DQuick REQUIRED)
-find_package(Qt53DRender REQUIRED)
-find_package(Qt53DQuickRender REQUIRED)
+find_package(Qt5 COMPONENTS Core Qml Widgets Quick 3DInput 3DQuick 3DRender 3DQuickRender REQUIRED)
 
 set(WITH_PCL ON  CACHE BOOL "Enable pcl")
 set(WITH_LAS OFF CACHE BOOL "Enable las")
@@ -76,13 +71,22 @@ if(BUILD_EXAMPLE)
     add_subdirectory(example)
 endif(BUILD_EXAMPLE)
 
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
 add_library(Qt3DPointcloudRenderer ${SOURCE} ${HEADER} ${LIBLAS_SOURCES} ${LASZIP_SOURCES})
 
-target_include_directories(Qt3DPointcloudRenderer PUBLIC  ${PROJECT_SOURCE_DIR}/include/
-                                                  PRIVATE ${PROJECT_SOURCE_DIR}/src/ )
+
+target_include_directories(
+    Qt3DPointcloudRenderer PUBLIC
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>"
+    # "$<BUILD_INTERFACE:${generated_headers}>"
+)
+
+#target_include_directories(Qt3DPointcloudRenderer PUBLIC  ${PROJECT_SOURCE_DIR}/include/
+#                                                  PRIVATE ${PROJECT_SOURCE_DIR}/src/ )
 
 if(WITH_PCL)
-    target_link_libraries(Qt3DPointcloudRenderer ${PCL_LIBRARIES} stdc++)
+    target_link_libraries(Qt3DPointcloudRenderer ${PCL_LIBRARIES})
     target_include_directories(${PROJECT_NAME} PRIVATE PRIVATE ${PCL_INCLUDE_DIRS})
     #target_compile_definitions(${PROJECT_NAME} PRIVATE ${PCL_DEFINITIONS}) causes command-line error in cmake from ubuntu 16.04
     target_compile_definitions(${PROJECT_NAME} PUBLIC WITH_PCL=1)
@@ -99,3 +103,84 @@ if(WITH_LAS)
 endif(WITH_LAS)
 
 qt5_use_modules(Qt3DPointcloudRenderer Qml Widgets Quick 3DCore 3DQuick 3DRender 3DQuickRender)
+
+
+################## Installation #################################################################################################################
+
+#set(generated_headers "${CMAKE_CURRENT_BINARY_DIR}/generated_headers")
+#set(Qt3DPointcloudRenderer_export "${generated_headers}/Qt3DPointcloudRenderer/qpointcloud.h")
+#include(GenerateExportHeader)
+#generate_export_header(Qt3DPointcloudRenderer EXPORT_FILE_NAME ${Qt3DPointcloudRenderer_export})
+
+
+set(config_install_dir "lib/cmake/${PROJECT_NAME}") # Сюда устанавливается *Config.cmake
+set(include_install_dir "include/${PROJECT_NAME}")
+
+
+
+
+# Конфигурация
+
+set(generated_dir "${CMAKE_CURRENT_BINARY_DIR}/generated")
+set(version_config "${generated_dir}/${PROJECT_NAME}ConfigVersion.cmake")
+set(project_config "${generated_dir}/${PROJECT_NAME}Config.cmake")
+set(TARGETS_EXPORT_NAME "${PROJECT_NAME}Targets")
+
+
+#set(TARGETS_EXPORT_NAME "${PROJECT_NAME}Targets")
+
+include(CMakePackageConfigHelpers)
+
+
+export(PACKAGE Qt3DPointcloudRenderer)
+
+
+# Create config files
+write_basic_package_version_file(
+    "${version_config}" COMPATIBILITY SameMajorVersion
+)
+
+configure_package_config_file(
+    "cmake/Config.cmake.in"
+    "${project_config}"
+    INSTALL_DESTINATION "${config_install_dir}"
+)
+
+
+#target_include_directories(Qt3DPointcloudRenderer PUBLIC 
+#	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>  
+#    $<INSTALL_INTERFACE:include>
+#)
+
+#install(FILES include/qpointcloud.h
+#	DESTINATION include
+#)
+
+install(TARGETS Qt3DPointcloudRenderer
+	EXPORT "${TARGETS_EXPORT_NAME}"
+	RUNTIME DESTINATION bin
+	LIBRARY DESTINATION lib
+	ARCHIVE DESTINATION lib/static
+	INCLUDES DESTINATION "${include_install_dir}"
+)
+
+install( 
+    FILES "${project_config}" "${version_config}"
+    DESTINATION "${config_install_dir}"
+)
+
+# Заголовочные файлы:
+#   * Source/foo/Bar.hpp -> <prefix>/include/foo/Bar.hpp
+#   * Source/foo/Baz.hpp -> <prefix>/include/foo/Baz.hpp
+install(
+    #DIRECTORY "include/"
+    FILES ${HEADER}
+    DESTINATION "${include_install_dir}"
+    #FILES_MATCHING PATTERN "*.hpp"
+)
+
+install(
+    EXPORT "${TARGETS_EXPORT_NAME}"
+#    NAMESPACE "${namespace}"
+    DESTINATION "${config_install_dir}"
+)
