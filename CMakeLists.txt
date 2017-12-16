@@ -1,10 +1,11 @@
 cmake_minimum_required(VERSION 3.8.0)
 project(Qt3DPointcloudRenderer VERSION 1.0.0)
 
-
-
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
+if(NOT CMAKE_DEBUG_POSTFIX)
+  set(CMAKE_DEBUG_POSTFIX d)
+endif()
 
 find_package(Qt5 COMPONENTS Core Qml Widgets Quick 3DInput 3DQuick 3DRender 3DQuickRender REQUIRED)
 
